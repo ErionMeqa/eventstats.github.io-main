@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Event Elo</title>
+<style>
+:root{--bg:#fff;--fg:#1a1a1a;--mut:#777;--line:#e4e4e4;--acc:#2a7de1;--up:#1a8a3a;--dn:#c0392b}
+@media(prefers-color-scheme:dark){:root{--bg:#15171a;--fg:#eee;--mut:#999;--line:#2b2e33;--acc:#5aa2ff;--up:#4cc26a;--dn:#ef6b5b}}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px system-ui,sans-serif}
+header{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+header b{font-size:18px} a{color:var(--acc);text-decoration:none;cursor:pointer}
+main{max-width:860px;margin:0 auto;padding:18px}
+.wrap{overflow-x:auto} table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--mut);font-weight:600;font-size:13px} .up{color:var(--up)} .dn{color:var(--dn)}
+input{padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)} button{padding:6px 12px;border:0;border-radius:6px;background:var(--acc);color:#fff;cursor:pointer}
+h2{margin:6px 0 12px} .mut{color:var(--mut)} svg{width:100%;height:160px;margin:8px 0}
+</style></head><body>
+<header><b>Event Elo</b><a href="#/">Leaderboard</a><a href="#/events">Events</a><a href="#/admin" class="mut">Admin</a></header>
+<main id="app">Loading...</main>
+<script>
+const $ = document.getElementById('app');
+const get = u => fetch(u).then(r => r.json());
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const chg = (b, a) => { const d = a - b; return `<span class="${d >= 0 ? 'up' : 'dn'}">${d >= 0 ? '+' : ''}${d.toFixed(1)}</span>`; };
+
+async function leaderboard() {
+  const rows = await get('/api/leaderboard');
+  $.innerHTML = `<h2>Leaderboard</h2><div class="wrap"><table><tr><th>#</th><th>Player</th><th>Events</th><th>Rating</th></tr>
+  ${rows.map((p, i) => `<tr><td>${i + 1}</td><td><a href="#/player/${p.id}">${esc(p.name)}</a></td><td>${p.events}</td><td>${Math.round(p.rating)}</td></tr>`).join('')}</table></div>`;
+}
+async function events() {
+  const rows = await get('/api/events');
+  $.innerHTML = `<h2>Events</h2><div class="wrap"><table><tr><th>Event</th><th>Date</th><th>Players</th></tr>
+  ${rows.map(e => `<tr><td><a href="#/event/${e.id}">${esc(e.name)}</a></td><td>${esc(e.date)}</td><td>${e.players}</td></tr>`).join('')}</table></div>`;
+}
+async function event(id) {
+  const d = await get('/api/events/' + id);
+  $.innerHTML = `<h2>${esc(d.event.name)} <span class="mut">${esc(d.event.date)}</span></h2>
+  ${d.teams.length ? `<h3>Team standings</h3><div class="wrap"><table><tr><th>#</th><th>Team</th><th>Players</th></tr>
+  ${d.teams.map(t => `<tr><td>${t.placement}</td><td>${esc(t.name)}</td><td>${t.players.map(esc).join(', ')}</td></tr>`).join('')}</table></div>` : ''}
+  <h3>${d.players.every(p => p.placement == null) ? 'Players (team standings only)' : 'Individual results'}</h3><div class="wrap"><table><tr><th>#</th><th>Player</th><th>Team</th><th>Rating</th><th>Change</th></tr>
+  ${d.players.map(p => `<tr><td>${p.placement ?? '-'}</td><td><a href="#/player/${p.id}">${esc(p.name)}</a></td><td>${esc(p.team || '')}</td><td>${Math.round(p.after)}</td><td>${chg(p.before, p.after)}</td></tr>`).join('')}</table></div>`;
+}
+async function player(id) {
+  const { player, history } = await get('/api/players/' + id);
+  const pts = [1500, ...history.map(h => h.after)];
+  const lo = Math.min(...pts) - 10, hi = Math.max(...pts) + 10;
+  const x = i => 10 + (i * 480) / Math.max(1, pts.length - 1), y = v => 150 - ((v - lo) / (hi - lo)) * 140;
+  $.innerHTML = `<h2>${esc(player.name)} <span class="mut">${Math.round(player.rating)} · ${player.events} events</span></h2>
+  <svg viewBox="0 0 500 160" preserveAspectRatio="none"><polyline fill="none" stroke="var(--acc)" stroke-width="2" points="${pts.map((v, i) => x(i) + ',' + y(v)).join(' ')}"/></svg>
+  <div class="wrap"><table><tr><th>Event</th><th>Date</th><th>Team</th><th>Team #</th><th>Place</th><th>Change</th></tr>
+  ${history.slice().reverse().map(h => `<tr><td><a href="#/event/${h.event_id}">${esc(h.name)}</a></td><td>${esc(h.date)}</td><td>${esc(h.team || '')}</td><td>${h.team_placement ?? ''}</td><td>${h.placement ?? '-'}</td><td>${chg(h.before, h.after)}</td></tr>`).join('')}</table></div>`;
+}
+
+const api = (u, body) => fetch(u, { method: body ? 'POST' : 'GET',
+  headers: { 'x-admin-token': sessionStorage.token || '', 'content-type': 'application/json' },
+  body: body && JSON.stringify(body) }).then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.error); return d; });
+async function admin() {
+  if (!sessionStorage.token) {
+    $.innerHTML = `<h2>Admin</h2><input id="t" type="password" placeholder="Admin token"> <button id="go">Log in</button>`;
+    document.getElementById('go').onclick = () => { sessionStorage.token = document.getElementById('t').value; admin(); };
+    return;
+  }
+  let rows;
+  try { rows = await api('/api/unmatched'); } catch (e) { sessionStorage.removeItem('token'); $.innerHTML = '<h2>Admin</h2><p class="dn">' + esc(e.message) + '</p><a href="#/admin" onclick="setTimeout(admin)">Try again</a>'; return; }
+  $.innerHTML = `<h2>Admin</h2><button id="ref">Refresh all names from Mojang</button> <span id="msg" class="mut"></span>
+  <h3>Unmatched players (no UUID yet)</h3><p class="mut">Look the name up on NameMC, paste the UUID, and press Link. If that UUID already belongs to another player, the two are merged.</p>
+  <div class="wrap"><table><tr><th>Name</th><th>Events</th><th>NameMC</th><th>UUID</th><th></th></tr>
+  ${rows.map(p => `<tr><td>${esc(p.name)}</td><td>${p.events}</td><td><a target="_blank" rel="noopener" href="https://namemc.com/search?q=${encodeURIComponent(p.name)}">search</a></td>
+  <td><input size="34" id="u${p.id}" placeholder="UUID"></td><td><button data-id="${p.id}">Link</button></td></tr>`).join('') || '<tr><td colspan="5">Everyone is linked.</td></tr>'}</table></div>`;
+  const msg = document.getElementById('msg');
+  document.getElementById('ref').onclick = async () => { msg.textContent = 'Working...'; try { const r = await api('/api/refresh-names', {}); msg.textContent = `Checked ${r.checked}, renamed ${r.changed}, failed ${r.failed}`; } catch (e) { msg.textContent = e.message; } };
+  $.querySelectorAll('button[data-id]').forEach(b => b.onclick = async () => {
+    try { await api('/api/link', { player_id: +b.dataset.id, uuid: document.getElementById('u' + b.dataset.id).value }); admin(); }
+    catch (e) { msg.textContent = e.message; }
+  });
+}
+function route() {
+  const [, a, b] = location.hash.split('/');
+  ({ events, admin, event: () => event(b), player: () => player(b) }[a] || leaderboard)();
+}
+addEventListener('hashchange', route); route();
+</script></body></html>

@@ -1,0 +1,30 @@
+[
+  {
+    "file": "pandoras-box-1.csv",
+    "name": "Pandora's Box 1",
+    "date": "2022-03-06",
+    "source": "pandoras-box-event.fandom.com/wiki/Pandora's_Box_1",
+    "notes": "Team standings (8 teams) plus individual placements (32 players) from the community Pandora's Box stats sheet; checked against the wiki. Placement = Final Team Leaderboard (points); Hazel Hydras won the finals even though Crimson Cyclopes led on points. Pink Pegasi roster uses gummywroms, who subbed in for FireBreathMan. Names on the sheet's individual board differ for 3 players: Heliodor=Hal_90k, Loopizzle=lopie, CGQ_=CGQ47ye."
+  },
+  {
+    "file": "mcc-rising-1.csv",
+    "name": "MC Championship Rising",
+    "date": "2021-10-02",
+    "source": "mcchampionship.fandom.com/wiki/MC_Championship_Rising",
+    "notes": "Individual standings only (40 players, tied 16th). Only 3 of 10 team rosters were available, so no teams."
+  },
+  {
+    "file": "pandoras-box-12.csv",
+    "name": "Pandora's Box 12",
+    "date": "2024-04-07",
+    "source": "pandoras-box-event.fandom.com/wiki/Pandora's_Box_12",
+    "notes": "Team standings (8 teams) plus individual placements (32 players) from the community Pandora's Box stats sheet; checked against the wiki. Placement = Final Team Leaderboard (points); the wiki lists Purple Phoenixes as event winner (finals), Cobalt Centaurs led on points. pee_fart2 (wiki) appears as TedsAttic on the sheet."
+  },
+  {
+    "file": "pandoras-box-dragon-pit-ascension.csv",
+    "name": "Pandora's Box Dragon Pit: Ascension",
+    "date": "2024-11-03",
+    "source": "pandoras-box-event.fandom.com/wiki/Pandora's_Box_Dragon_Pit:_Ascension",
+    "notes": "Team standings only (8 teams). Wiki roster; it differs from the pre-event announcement for 2 players (likely substitutes)."
+  }
+]
